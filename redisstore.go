@@ -20,7 +20,7 @@ type RedisStore struct {
 	// client to connect to redis
 	client redis.UniversalClient
 	// default options to use when a new session is created
-	options sessions.Options
+	Options *sessions.Options
 	// key prefix with which the session will be stored
 	keyPrefix string
 	// key generator
@@ -33,10 +33,9 @@ type RedisStore struct {
 type KeyGenFunc func() (string, error)
 
 // NewRedisStore returns a new RedisStore with default configuration
-func NewRedisStore(client redis.UniversalClient) (*RedisStore, error) {
-
-	rs := &RedisStore{
-		options: sessions.Options{
+func NewRedisStore(client redis.UniversalClient) *RedisStore {
+	rs := RedisStore{
+		Options: &sessions.Options{
 			Path:   "/",
 			MaxAge: 86400 * 30,
 		},
@@ -45,8 +44,7 @@ func NewRedisStore(client redis.UniversalClient) (*RedisStore, error) {
 		keyGen:     generateRandomKey,
 		serializer: GobSerializer{},
 	}
-
-	return rs, rs.client.Ping().Err()
+	return &rs
 }
 
 // Get returns a session for the given name after adding it to the registry.
@@ -58,8 +56,7 @@ func (s *RedisStore) Get(r *http.Request, name string) (*sessions.Session, error
 func (s *RedisStore) New(r *http.Request, name string) (*sessions.Session, error) {
 
 	session := sessions.NewSession(s, name)
-	opts := s.options
-	session.Options = &opts
+	session.Options = s.Options
 	session.IsNew = true
 
 	c, err := r.Cookie(name)
@@ -109,8 +106,8 @@ func (s *RedisStore) Save(r *http.Request, w http.ResponseWriter, session *sessi
 }
 
 // Options set options to use when a new session is created
-func (s *RedisStore) Options(opts sessions.Options) {
-	s.options = opts
+func (s *RedisStore) SetOptions(opts sessions.Options) {
+	s.Options = &opts
 }
 
 // KeyPrefix sets the key prefix to store session in Redis

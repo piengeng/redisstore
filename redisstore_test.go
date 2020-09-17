@@ -16,21 +16,17 @@ var (
 		"ubuntu.home:7003", "ubuntu.home:7004", "ubuntu.home:7005",
 	}
 	clustered = true
-	keyPrefix = "s:" // hard coded in redisstore.go
+	keyPrefix = "a:" // hard coded in redisstore.go
 	client    redis.UniversalClient
 )
 
-func createStore(t *testing.T, keyPrefix string, options sessions.Options) (*RedisStore, error) {
-	store, err := NewRedisStore(client)
-	if err != nil {
-		t.Fatal("failed to create redis store", err)
-	}
+func createStore(t *testing.T, keyPrefix string, options sessions.Options) *RedisStore {
+	store := NewRedisStore(client)
 	store.KeyPrefix(keyPrefix)
-	store.Options(options)
-	return store, err
+	store.SetOptions(options)
+	return store
 }
-func TestSuite(t *testing.T) {
-
+func TestSuite_Basic(t *testing.T) {
 	if clustered { // setup
 		client = redis.NewClusterClient(&redis.ClusterOptions{Addrs: redisAddrs})
 	} else {
@@ -39,10 +35,7 @@ func TestSuite(t *testing.T) {
 	defer client.Close() // teardown
 
 	t.Run("create store then request then session", func(t *testing.T) {
-		store, err := createStore(t, "s:", sessions.Options{Path: "/", Domain: "example.com", MaxAge: 60 * 5})
-		if err != nil {
-			t.Fatal("failed to create redis store", err)
-		}
+		store := createStore(t, keyPrefix, sessions.Options{Path: "/", Domain: "example.com", MaxAge: 60 * 5})
 		request, err := http.NewRequest("GET", "http://www.example.com", nil)
 		if err != nil {
 			t.Fatal("failed to create request", err)
@@ -57,27 +50,21 @@ func TestSuite(t *testing.T) {
 	})
 
 	t.Run("setting options", func(t *testing.T) {
-		store, err := createStore(t, "s:", sessions.Options{Path: "/", Domain: "example.com", MaxAge: 60 * 5})
-		if err != nil {
-			t.Fatal("failed to create redis store", err)
-		}
+		store := createStore(t, keyPrefix, sessions.Options{Path: "/", Domain: "example.com", MaxAge: 60 * 5})
 		opts := sessions.Options{Path: "/path", MaxAge: 99999}
-		store.Options(opts)
+		store.SetOptions(opts)
 		request, err := http.NewRequest("GET", "http://www.example.com", nil)
 		if err != nil {
 			t.Fatal("failed to create request", err)
 		}
-		session, err := store.New(request, "hello")
+		session, _ := store.New(request, "hello")
 		if session.Options.Path != opts.Path || session.Options.MaxAge != opts.MaxAge {
 			t.Fatal("failed to set options")
 		}
 	})
 
 	t.Run("saving session", func(t *testing.T) {
-		store, err := createStore(t, "s:", sessions.Options{Path: "/", Domain: "example.com", MaxAge: 60 * 5})
-		if err != nil {
-			t.Fatal("failed to create redis store", err)
-		}
+		store := createStore(t, keyPrefix, sessions.Options{Path: "/", Domain: "example.com", MaxAge: 60 * 5})
 		request, err := http.NewRequest("GET", "http://www.example.com", nil)
 		if err != nil {
 			t.Fatal("failed to create request", err)
@@ -95,10 +82,7 @@ func TestSuite(t *testing.T) {
 	})
 
 	t.Run("deleting session", func(t *testing.T) {
-		store, err := createStore(t, "s:", sessions.Options{Path: "/", Domain: "example.com", MaxAge: 60 * 5})
-		if err != nil {
-			t.Fatal("failed to create redis store", err)
-		}
+		store := createStore(t, keyPrefix, sessions.Options{Path: "/", Domain: "example.com", MaxAge: 60 * 5})
 		request, err := http.NewRequest("GET", "http://www.example.com", nil)
 		if err != nil {
 			t.Fatal("failed to create request", err)
