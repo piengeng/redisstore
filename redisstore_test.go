@@ -15,7 +15,7 @@ var (
 		"ubuntu.home:7000", "ubuntu.home:7001", "ubuntu.home:7002",
 		"ubuntu.home:7003", "ubuntu.home:7004", "ubuntu.home:7005",
 	}
-	clustered = false
+	clustered = true
 	keyPrefix = "s:" // hard coded in redisstore.go
 	client    redis.UniversalClient
 )
